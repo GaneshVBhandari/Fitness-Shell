@@ -9,14 +9,22 @@ set_fitness_goal() {
   goal_description=$(dialog --inputbox "Goal Description:" 8 40 --stdout)
   target_value=$(dialog --inputbox "Target Value:" 8 40 --stdout)
 
-  echo "$goal_type,$goal_description,$target_value,0" >> "$GOAL_FILE"
+  # Check if file exists and if not, add header
+  if [ ! -e "$GOAL_FILE" ]; then
+    echo -e "Goal Type\tGoal Description\tTarget Value\tProgress" > "$GOAL_FILE"
+  fi
+
+  echo -e "$goal_type\t$goal_description\t$target_value\t0" >> "$GOAL_FILE"
   dialog --msgbox "Fitness goal set successfully." 8 40
 }
 
 # Function to view all fitness goals
 view_fitness_goals() {
   if [ -s "$GOAL_FILE" ]; then
-    dialog --title "Fitness Goals" --textbox "$GOAL_FILE" 20 80
+    # Use column command to format the table with appropriate headers
+    (printf "Goal Type\tGoal Description\tTarget Value\tProgress\n" && cat "$GOAL_FILE") | column -t -s $'\t' > temp.txt
+    dialog --title "Fitness Goals" --textbox temp.txt 20 80
+    rm temp.txt
   else
     dialog --title "Fitness Goals" --msgbox "No fitness goals found." 8 40
   fi
@@ -24,12 +32,12 @@ view_fitness_goals() {
 
 # Function to update progress towards a fitness goal
 update_fitness_progress() {
-  goals=$(awk -F',' '{print $2}' "$GOAL_FILE")
+  goals=$(awk -F'\t' '{print $2}' "$GOAL_FILE")
   IFS=$'\n' read -r -d '' -a goals_array <<< "$goals"
 
   goal_number=$(dialog --menu "Select Goal to Update Progress" 20 80 10 "${goals_array[@]}" --stdout)
 
-  current_progress=$(awk -F, -v goal_number="$goal_number" 'NR==goal_number {print $4}' "$GOAL_FILE")
+  current_progress=$(awk -F'\t' -v goal_number="$goal_number" 'NR==goal_number+1 {print $4}' "$GOAL_FILE")
 
   new_progress=$(dialog --inputbox "Enter current progress (numeric value):" 8 40 --stdout)
   sed -i "${goal_number}s/$current_progress/$new_progress/" "$GOAL_FILE"

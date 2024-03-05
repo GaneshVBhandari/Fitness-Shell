@@ -12,14 +12,22 @@ add_meal() {
   fats=$(dialog --inputbox "Fats (g):" 8 40 --stdout)
   time_of_consumption=$(dialog --inputbox "Time of Consumption (HH:MM):" 8 40 --stdout)
 
-  echo "$meal_name,$calories,$proteins,$carbohydrates,$fats,$time_of_consumption" >> "$MEAL_FILE"
+  # Check if file exists and if not, add header
+  if [ ! -e "$MEAL_FILE" ]; then
+    echo -e "Meal Name\tCalories\tProteins (g)\tCarbohydrates (g)\tFats (g)\tTime of Consumption" > "$MEAL_FILE"
+  fi
+
+  echo -e "$meal_name\t$calories\t$proteins\t$carbohydrates\t$fats\t$time_of_consumption" >> "$MEAL_FILE"
   dialog --msgbox "Meal added successfully." 8 40
 }
 
 # Function to view all meals
 view_meals() {
   if [ -s "$MEAL_FILE" ]; then
-    dialog --title "Meal Log" --textbox "$MEAL_FILE" 20 80
+    # Use column command to format the table with appropriate headers
+    (printf "Meal Name\tCalories\tProteins (g)\tCarbohydrates (g)\tFats (g)\tTime of Consumption\n" && cat "$MEAL_FILE") | column -t -s $'\t' > temp.txt
+    dialog --title "Meal Log" --textbox temp.txt 20 80
+    rm temp.txt
   else
     dialog --title "Meal Log" --msgbox "No meals found." 8 40
   fi
